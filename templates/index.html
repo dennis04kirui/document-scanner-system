@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Document Scanner</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body { padding: 20px; background-color: #f8f9fa; font-family: Arial, sans-serif; }
+        h2 { margin-bottom: 20px; color: #333; }
+        .card { margin-top: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        img { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 5px; }
+        .btn-block { padding: 10px; font-size: 16px; }
+        #loader { display: none; margin-top: 10px; }
+        .comparison { display: flex; flex-wrap: wrap; justify-content: space-around; }
+        .comparison div { margin-bottom: 20px; text-align: center; }
+        .comparison img { max-width: 45%; margin: 5px; border-radius: 5px; border: 1px solid #ddd; }
+        @media(max-width: 768px){
+            .comparison img { max-width: 90%; margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2 class="text-center">Mobile Document Scanner</h2>
+    <p class="text-center">Upload one or more photos of your documents. The system will enhance and process them automatically.</p>
+
+    <!-- Upload Form -->
+    <form id="uploadForm" method="POST" enctype="multipart/form-data" class="text-center">
+        <input type="file" name="images" accept="image/*" class="form-control-file mb-2" multiple required>
+        <button type="submit" class="btn btn-primary btn-block">Upload & Process</button>
+        <div id="loader" class="spinner-border text-primary" role="status">
+            <span class="sr-only">Processing...</span>
+        </div>
+    </form>
+
+    <!-- Processed Images -->
+    {% if processed_images %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title text-center">Processed Documents</h5>
+            <div class="comparison text-center">
+                {% for img in processed_images %}
+                <div>
+                    <p>Original / Processed</p>
+                    <img src="{{ url_for('static', filename='uploads/' + img) }}" alt="Original">
+                    <img src="{{ url_for('static', filename='processed/' + img) }}" alt="Processed">
+                </div>
+                {% endfor %}
+            </div>
+            <div class="text-center mt-3">
+                <a href="{{ url_for('download_pdf') }}" class="btn btn-success btn-block">Download All as PDF</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Show loader while processing
+    document.getElementById('uploadForm').addEventListener('submit', function(){
+        document.getElementById('loader').style.display = 'inline-block';
+    });
+</script>
+</body>
+</html>
