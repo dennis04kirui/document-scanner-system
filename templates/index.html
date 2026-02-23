@@ -1,66 +1,217 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mobile Document Scanner</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>Intelligent Document Scanner</title>
     <style>
-        body { padding: 20px; background-color: #f8f9fa; font-family: Arial, sans-serif; }
-        h2 { margin-bottom: 20px; color: #333; }
-        .card { margin-top: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        img { max-width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 5px; }
-        .btn-block { padding: 10px; font-size: 16px; }
-        #loader { display: none; margin-top: 10px; }
-        .comparison { display: flex; flex-wrap: wrap; justify-content: space-around; }
-        .comparison div { margin-bottom: 20px; text-align: center; }
-        .comparison img { max-width: 45%; margin: 5px; border-radius: 5px; border: 1px solid #ddd; }
-        @media(max-width: 768px){
-            .comparison img { max-width: 90%; margin: 5px 0; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h2, h3 {
+            text-align: center;
+            color: #333;
+        }
+
+        a {
+            margin-right: 10px;
+            text-decoration: none;
+            color: #007BFF;
+        }
+
+        hr {
+            margin: 20px 0;
+        }
+
+        .flash {
+            background-color: #ffeeba;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #ffeeba;
+        }
+
+        form {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        input[type="file"] {
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #camera {
+            display: block;
+            margin: 10px auto;
+            border: 2px solid #007BFF;
+            border-radius: 5px;
+        }
+
+        .processed-image {
+            display: inline-block;
+            margin: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 5px;
+            background: white;
+        }
+
+        .processed-image img {
+            display: block;
+            max-width: 250px;
+            margin-bottom: 10px;
+        }
+
+        .delete-button {
+            background-color: #dc3545;
+        }
+
+        .delete-button:hover {
+            background-color: #a71d2a;
+        }
+
+        @media (max-width: 600px) {
+            .processed-image img {
+                max-width: 90%;
+            }
+
+            button {
+                width: 80%;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2 class="text-center">Mobile Document Scanner</h2>
-    <p class="text-center">Upload one or more photos of your documents. The system will enhance and process them automatically.</p>
 
-    <!-- Upload Form -->
-    <form id="uploadForm" method="POST" enctype="multipart/form-data" class="text-center">
-        <input type="file" name="images" accept="image/*" class="form-control-file mb-2" multiple required>
-        <button type="submit" class="btn btn-primary btn-block">Upload & Process</button>
-        <div id="loader" class="spinner-border text-primary" role="status">
-            <span class="sr-only">Processing...</span>
-        </div>
-    </form>
+<h2>Welcome, {{ current_user.username }}</h2>
+<div style="text-align:center; margin-bottom:15px;">
+    <a href="{{ url_for('logout') }}">Logout</a> |
+    <a href="{{ url_for('download_pdf') }}">Download PDF</a>
+</div>
 
-    <!-- Processed Images -->
-    {% if processed_images %}
-    <div class="card">
-        <div class="card-body">
-            <h5 class="card-title text-center">Processed Documents</h5>
-            <div class="comparison text-center">
-                {% for img in processed_images %}
-                <div>
-                    <p>Original / Processed</p>
-                    <img src="{{ url_for('static', filename='uploads/' + img) }}" alt="Original">
-                    <img src="{{ url_for('static', filename='processed/' + img) }}" alt="Processed">
-                </div>
-                {% endfor %}
-            </div>
-            <div class="text-center mt-3">
-                <a href="{{ url_for('download_pdf') }}" class="btn btn-success btn-block">Download All as PDF</a>
-            </div>
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="flash">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- Unified Scan Form -->
+<h3>Scan Document</h3>
+<form id="scanForm" method="POST" enctype="multipart/form-data">
+    <input type="file" name="images" id="fileInput" multiple>
+    <input type="file" name="images" id="cameraInput" style="display:none;">
+    <button type="button" id="scanButton">Scan</button>
+</form>
+
+<!-- Desktop Webcam -->
+<video id="camera" width="320" height="240" autoplay style="display:none;"></video>
+<canvas id="canvas" style="display:none;"></canvas>
+
+<hr>
+
+<!-- Delete All Button -->
+<form method="POST" action="{{ url_for('delete_all') }}">
+    <button type="submit" class="delete-button">Delete All My Scans</button>
+</form>
+
+<hr>
+
+<!-- Processed Images -->
+<h3>Processed Images</h3>
+<div style="text-align:center;">
+{% if processed_images %}
+    {% for img in processed_images %}
+        <div class="processed-image">
+            <img src="{{ url_for('static', filename='processed/' + img) }}">
+            <form method="POST" action="{{ url_for('delete_file', filename=img) }}">
+                <button type="submit" class="delete-button">Delete</button>
+            </form>
         </div>
-    </div>
-    {% endif %}
+    {% endfor %}
+{% else %}
+    <p>No processed images yet.</p>
+{% endif %}
 </div>
 
 <script>
-    // Show loader while processing
-    document.getElementById('uploadForm').addEventListener('submit', function(){
-        document.getElementById('loader').style.display = 'inline-block';
+const scanButton = document.getElementById('scanButton');
+const scanForm = document.getElementById('scanForm');
+const fileInput = document.getElementById('fileInput');
+const cameraInput = document.getElementById('cameraInput');
+const video = document.getElementById('camera');
+const canvas = document.getElementById('canvas');
+
+const useWebcam = location.protocol === 'https:' || location.hostname === 'localhost';
+
+if (useWebcam) {
+    video.style.display = 'block';
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => {
+            console.log('Camera not accessible, using fallback', err);
+            video.style.display = 'none';
+        });
+}
+
+scanButton.addEventListener('click', () => {
+    // 1️⃣ If file selected, submit it
+    if (fileInput.files.length > 0) {
+        scanForm.submit();
+        return;
+    }
+
+    // 2️⃣ Desktop webcam capture
+    if (useWebcam && video.srcObject) {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(blob => {
+            const file = new File([blob], `camera_${Date.now()}.png`, { type: 'image/png' });
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            cameraInput.files = dt.files;
+            scanForm.submit();
+        }, 'image/png');
+        return;
+    }
+
+    // 3️⃣ Mobile fallback
+    const mobileInput = document.createElement('input');
+    mobileInput.type = 'file';
+    mobileInput.name = 'images';
+    mobileInput.accept = 'image/*';
+    mobileInput.capture = 'environment';
+    mobileInput.style.display = 'none';
+    scanForm.appendChild(mobileInput);
+
+    mobileInput.addEventListener('change', () => {
+        scanForm.submit();
     });
+
+    mobileInput.click();
+});
 </script>
+
 </body>
 </html>
